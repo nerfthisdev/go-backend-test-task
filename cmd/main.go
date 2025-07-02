@@ -7,8 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"github.com/nerfthisdev/go-backend-test-task/internal/auth"
+	"github.com/nerfthisdev/go-backend-test-task/internal/handler"
 	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
 )
 
@@ -35,15 +36,22 @@ func main() {
 		log.Fatalf("failed to init table: %v", err.Error())
 	}
 
+	accessTTL, _ := time.ParseDuration(os.Getenv("ACCESS_TOKEN_TTL"))
+	refreshTTL, _ := time.ParseDuration(os.Getenv("REFRESH_TOKEN_TTL"))
+	signingKey := os.Getenv("JWT_SECRET")
+
+	authservice := auth.NewAuthService(repo, signingKey, accessTTL, refreshTTL)
+	authhandler := handler.NewAuthHandler(authservice)
+
 	router := http.NewServeMux()
+	router.HandleFunc("GET /api/v1/auth/token", authhandler.AddUser)
+	router.HandleFunc("GET /api/v1/auth/user/{id}", authhandler.FetchUser)
 
 	port := ":" + os.Getenv("HTTP_PORT")
 	server := http.Server{
 		Addr:    port,
 		Handler: router,
 	}
-
-	repo.StoreRefreshToken(ctx, uuid.New(), "bebra", time.Now())
 
 	log.Printf("starting server on %s", port)
 	if err := server.ListenAndServe(); err != nil {
