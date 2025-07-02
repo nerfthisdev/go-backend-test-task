@@ -1,4 +1,4 @@
-package auth
+package model
 
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
@@ -10,5 +10,7 @@ type RefreshTokenRequest struct {
 }
 
 type UserResponse struct {
-	UserID string `json:"user_id"`
+	UserID       string `json:"user_id"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresAt    string `json:"expires_at"`
 }

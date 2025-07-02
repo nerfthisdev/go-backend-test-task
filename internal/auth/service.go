@@ -9,7 +9,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/nerfthisdev/go-backend-test-task/internal/model"
 	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var ErrTokenNotFound = errors.New("token not found")
@@ -30,7 +32,7 @@ func NewAuthService(repo *repository.Repository, signingKey string, accessTTL, r
 	}
 }
 
-func (s *AuthService) CreateTokenPair(ctx context.Context, guid uuid.UUID) (TokenPair, error) {
+func (s *AuthService) CreateTokenPair(ctx context.Context, guid uuid.UUID) (model.TokenPair, error) {
 	// HMAC and SHA512
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.RegisteredClaims{
 		Subject:   guid.String(),
@@ -40,18 +42,34 @@ func (s *AuthService) CreateTokenPair(ctx context.Context, guid uuid.UUID) (Toke
 
 	accessTokenString, err := accessToken.SignedString(s.signingKey)
 	if err != nil {
-		return TokenPair{}, err
+		return model.TokenPair{}, err
 	}
 
 	refreshTokenBytes := make([]byte, 32)
 	if _, err := rand.Read(refreshTokenBytes); err != nil {
-		return TokenPair{}, err
+		return model.TokenPair{}, err
 	}
 
 	refreshTokenString := base64.StdEncoding.EncodeToString(refreshTokenBytes)
+	hashedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(refreshTokenString), bcrypt.DefaultCost)
+	if err != nil {
+		return model.TokenPair{}, err
+	}
 
-	return TokenPair{
+	// Сохраняем refresh токен в БД (или в памяти, если in-memory)
+	err = s.repo.StoreRefreshToken(ctx, guid, string(hashedRefreshToken), time.Now().Add(s.refreshTTL))
+
+	return model.TokenPair{
 		AccessToken:  accessTokenString,
 		RefreshToken: refreshTokenString,
 	}, err
+}
+
+func (s *AuthService) GetUserByGuid(ctx context.Context, guid uuid.UUID) (model.UserResponse, error) {
+	userResponse, err := s.repo.SelectUser(ctx, guid)
+	if err != nil {
+		return model.UserResponse{}, err
+	}
+
+	return *userResponse, nil
 }
