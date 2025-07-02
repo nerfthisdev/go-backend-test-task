@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -42,6 +43,7 @@ func (h *AuthHandler) FetchUser(w http.ResponseWriter, r *http.Request) {
 
 	userResponse, err := h.service.GetUserByGuid(r.Context(), guid)
 	if err != nil {
+		log.Fatalf("error %v", err.Error())
 		http.Error(w, `"error": "failed to fetch user"`, http.StatusBadRequest)
 	}
 	w.Header().Set("Content-Type", "application/json")

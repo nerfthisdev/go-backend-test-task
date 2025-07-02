@@ -67,13 +67,22 @@ func (r *Repository) StoreRefreshToken(ctx context.Context, userID uuid.UUID, to
 }
 
 func (r *Repository) SelectUser(ctx context.Context, userID uuid.UUID) (*model.UserResponse, error) {
-	query := `SELECT guid, token, expires_at FROM refresh_tokens WHERE guid="$1"`
+	query := `SELECT guid, token, expires_at FROM refresh_tokens WHERE guid=$1`
 
-	var userResponse model.UserResponse
-	err := r.DB.QueryRow(ctx, query, userID).Scan(&userResponse.UserID, &userResponse.RefreshToken, &userResponse.ExpiresAt)
+	var guid uuid.UUID
+	var token string
+	var expiresAt time.Time
+
+	err := r.DB.QueryRow(ctx, query, userID).Scan(&guid, &token, &expiresAt)
 	if err != nil {
 		return nil, err
 	}
 
-	return &userResponse, nil
+	resp := &model.UserResponse{
+		UserID:       guid.String(),
+		RefreshToken: token,
+		ExpiresAt:    expiresAt.String(),
+	}
+
+	return resp, nil
 }
