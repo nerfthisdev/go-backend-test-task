@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,6 +24,11 @@ func Init(ctx context.Context) (*Repository, error) {
 	)
 
 	cfg, err := pgxpool.ParseConfig(dburi)
+
+	cfg.MaxConns = 25
+	cfg.MaxConnIdleTime = 5 * time.Minute
+	cfg.MaxConnLifetime = 2 * time.Hour
+
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +43,7 @@ func Init(ctx context.Context) (*Repository, error) {
 	}, nil
 }
 
-func (r *Repository) initSchema(ctx context.Context) error {
+func (r *Repository) InitSchema(ctx context.Context) error {
 	query := `CREATE TABLE IF NOT EXISTS refresh_tokens (
 			guid UUID NOT NULL,
 			token TEXT PRIMARY KEY,
