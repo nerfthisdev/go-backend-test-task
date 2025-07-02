@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nerfthisdev/go-backend-test-task/internal/model"
 )
 
 type Repository struct {
@@ -63,4 +64,16 @@ func (r *Repository) StoreRefreshToken(ctx context.Context, userID uuid.UUID, to
 	query := `INSERT INTO refresh_tokens (guid, token, expires_at) VALUES ($1, $2, $3)`
 	_, err := r.DB.Exec(ctx, query, userID, token, expiresAt)
 	return err
+}
+
+func (r *Repository) SelectUser(ctx context.Context, userID uuid.UUID) (*model.UserResponse, error) {
+	query := `SELECT guid, token, expires_at FROM refresh_tokens WHERE guid="$1"`
+
+	var userResponse model.UserResponse
+	err := r.DB.QueryRow(ctx, query, userID).Scan(&userResponse.UserID, &userResponse.RefreshToken, &userResponse.ExpiresAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userResponse, nil
 }
