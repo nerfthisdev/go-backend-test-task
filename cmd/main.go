@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
 )
@@ -41,6 +42,8 @@ func main() {
 		Addr:    port,
 		Handler: router,
 	}
+
+	repo.StoreRefreshToken(ctx, uuid.New(), "bebra", time.Now())
 
 	log.Printf("starting server on %s", port)
 	if err := server.ListenAndServe(); err != nil {

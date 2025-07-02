@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -56,4 +57,10 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *Repository) StoreRefreshToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error {
+	query := `INSERT INTO refresh_tokens (guid, token, expires_at) VALUES ($1, $2, $3)`
+	_, err := r.DB.Exec(ctx, query, userID, token, expiresAt)
+	return err
 }
