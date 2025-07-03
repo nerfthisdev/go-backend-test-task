@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nerfthisdev/go-backend-test-task/internal/model"
+	"github.com/pkg/errors"
 )
 
 type Repository struct {
@@ -45,44 +45,25 @@ func Init(ctx context.Context) (*Repository, error) {
 	}, nil
 }
 
-func (r *Repository) InitSchema(ctx context.Context) error {
-	query := `CREATE TABLE IF NOT EXISTS refresh_tokens (
-			guid UUID NOT NULL,
-			token TEXT PRIMARY KEY,
-			expires_at TIMESTAMP NOT NULL
-		);`
-
-	_, err := r.DB.Exec(ctx, query)
+func (r *Repository) Save(ctx context.Context, user model.User) error {
+	query := `INSERT INTO auth
+	(guid, user_agent, ip_address, token, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)`
+	_, err := r.DB.Exec(ctx, query, user.Guid, user.UserAgent, user.IpAddress, user.Token, user.CreatedAt, user.ExpiresAt)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to save token")
 	}
-
 	return nil
 }
 
-func (r *Repository) StoreRefreshToken(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error {
-	query := `INSERT INTO refresh_tokens (guid, token, expires_at) VALUES ($1, $2, $3)`
-	_, err := r.DB.Exec(ctx, query, userID, token, expiresAt)
-	return err
-}
+func (r *Repository) Get(ctx context.Context, guid string) (string, string, error) {
+	var refreshToken string
+	var ip string
+	query := `SELECT token, ip_address FROM auth WHERE guid = $1`
 
-func (r *Repository) SelectUser(ctx context.Context, userID uuid.UUID) (*model.UserResponse, error) {
-	query := `SELECT guid, token, expires_at FROM refresh_tokens WHERE guid=$1`
-
-	var guid uuid.UUID
-	var token string
-	var expiresAt time.Time
-
-	err := r.DB.QueryRow(ctx, query, userID).Scan(&guid, &token, &expiresAt)
+	err := r.DB.QueryRow(ctx, query, guid).Scan(&refreshToken, &ip)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
-	resp := &model.UserResponse{
-		UserID:       guid.String(),
-		RefreshToken: token,
-		ExpiresAt:    expiresAt.String(),
-	}
-
-	return resp, nil
+	return refreshToken, ip, nil
 }

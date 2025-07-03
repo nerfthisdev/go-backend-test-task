@@ -32,7 +32,7 @@ func main() {
 	defer repo.DB.Close()
 	log.Println("successfully connected to db")
 
-	if err = repo.InitSchema(ctx); err != nil {
+	if err = repository.RunMigrations(repo.DB, "migrations"); err != nil {
 		log.Fatalf("failed to init table: %v", err.Error())
 	}
 
