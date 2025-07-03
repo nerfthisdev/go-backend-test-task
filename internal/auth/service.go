@@ -17,7 +17,7 @@ import (
 var ErrTokenNotFound = errors.New("token not found")
 
 type AuthService struct {
-	repo       *repository.Repository
+	Repo       *repository.Repository
 	signingKey []byte
 	accessTTL  time.Duration
 	refreshTTL time.Duration
@@ -25,7 +25,7 @@ type AuthService struct {
 
 func NewAuthService(repo *repository.Repository, signingKey string, accessTTL, refreshTTL time.Duration) *AuthService {
 	return &AuthService{
-		repo:       repo,
+		Repo:       repo,
 		signingKey: []byte(signingKey),
 		accessTTL:  accessTTL,
 		refreshTTL: refreshTTL,
@@ -56,12 +56,11 @@ func (s *AuthService) CreateTokenPair(ctx context.Context, guid uuid.UUID) (mode
 		return model.TokenPair{}, err
 	}
 
-	// Сохраняем refresh токен в БД (или в памяти, если in-memory)
-	err = s.repo.StoreRefreshToken(ctx, guid, string(hashedRefreshToken), time.Now().Add(s.refreshTTL))
-
 	return model.TokenPair{
 		AccessToken:  accessTokenString,
-		RefreshToken: refreshTokenString,
+		RefreshToken: string(hashedRefreshToken),
+		IssuedAt:     time.Now().String(),
+		RefreshExp:   time.Now().Add(s.refreshTTL).String(),
 	}, err
 }
 
