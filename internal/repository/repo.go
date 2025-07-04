@@ -3,11 +3,11 @@ package repository
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nerfthisdev/go-backend-test-task/internal/config"
 	"github.com/nerfthisdev/go-backend-test-task/internal/domain"
 	"github.com/pkg/errors"
 )
@@ -16,34 +16,31 @@ type Repository struct {
 	DB *pgxpool.Pool
 }
 
-func Init(ctx context.Context) (*Repository, error) {
+func Init(ctx context.Context, cfg config.Config) (*Repository, error) {
 	dburi := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBAddress,
+		cfg.DBPort,
+		cfg.DBName,
 	)
 
-	cfg, err := pgxpool.ParseConfig(dburi)
-
-	cfg.MaxConns = 25
-	cfg.MaxConnIdleTime = 5 * time.Minute
-	cfg.MaxConnLifetime = 2 * time.Hour
-
+	pgCfg, err := pgxpool.ParseConfig(dburi)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse db config: %w", err)
 	}
 
-	dbpool, err := pgxpool.NewWithConfig(ctx, cfg)
+	pgCfg.MaxConns = 25
+	pgCfg.MaxConnIdleTime = 5 * time.Minute
+	pgCfg.MaxConnLifetime = 2 * time.Hour
+
+	dbpool, err := pgxpool.NewWithConfig(ctx, pgCfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to db: %w", err)
 	}
 
-	return &Repository{
-		DB: dbpool,
-	}, nil
+	return &Repository{DB: dbpool}, nil
 }
 
 func (r *Repository) StoreRefreshToken(ctx context.Context, token domain.RefreshToken) error {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/nerfthisdev/go-backend-test-task/internal/config"
 	"github.com/nerfthisdev/go-backend-test-task/internal/logger"
 	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
 	"go.uber.org/zap"
@@ -19,6 +20,9 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
+	// init config
+	cfg := config.InitConfig()
+
 	// init context
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
@@ -27,14 +31,13 @@ func main() {
 
 	logger := logger.GetLogger()
 
-	repo, err := repository.Init(ctx)
+	repo, err := repository.Init(ctx, cfg)
 
 	if err != nil {
 		logger.Fatal("failed to connect to db", zap.String("reason", err.Error()))
 	}
 	defer repo.DB.Close()
-	
+
 	logger.Info("successfully connected to db")
-	
-	
+
 }
