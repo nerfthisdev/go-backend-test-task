@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/nerfthisdev/go-backend-test-task/internal/auth"
 	"github.com/nerfthisdev/go-backend-test-task/internal/config"
+	"github.com/nerfthisdev/go-backend-test-task/internal/handler"
 	"github.com/nerfthisdev/go-backend-test-task/internal/logger"
 	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
 	"go.uber.org/zap"
@@ -53,6 +56,22 @@ func main() {
 
 	jwtService := auth.NewJwtService(cfg.JWTSecret, accessTTL)
 
-	authService := auth.NewAuthService(tokenRepo, jwtService, &logger)
+	authService := auth.NewAuthService(tokenRepo, jwtService, userRepo, &logger)
+
+	authhandler := handler.NewAuthHandler(authService)
+
+	router := http.NewServeMux()
+	router.HandleFunc("GET /api/v1/auth/{guid}", authhandler.Authorize)
+
+	port := ":" + os.Getenv("HTTP_PORT")
+	server := http.Server{
+		Addr:    port,
+		Handler: router,
+	}
+
+	log.Printf("starting server on %s", port)
+	if err := server.ListenAndServe(); err != nil {
+		logger.Fatal("failed to start server ", zap.String("reason", err.Error()))
+	}
 
 }
