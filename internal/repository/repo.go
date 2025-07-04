@@ -6,8 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/nerfthisdev/go-backend-test-task/internal/model"
+	"github.com/nerfthisdev/go-backend-test-task/internal/domain"
 	"github.com/pkg/errors"
 )
 
@@ -45,25 +46,50 @@ func Init(ctx context.Context) (*Repository, error) {
 	}, nil
 }
 
-func (r *Repository) Save(ctx context.Context, user model.User) error {
-	query := `INSERT INTO auth
-	(guid, user_agent, ip_address, token, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)`
-	_, err := r.DB.Exec(ctx, query, user.Guid, user.UserAgent, user.IpAddress, user.Token, user.CreatedAt, user.ExpiresAt)
+func (r *Repository) StoreRefreshToken(ctx context.Context, token domain.RefreshToken) error {
+	query := `
+	INSERT INTO refresh_tokens
+	(guid, token_hash, session_id, user_agent, ip_address, created_at, expires_at)
+	`
+	_, err := r.DB.Exec(ctx, query, token.GUID, token.TokenHash, token.SessionID, token.UserAgent, token.IP, token.CreatedAt, token.ExpiresAt)
 	if err != nil {
-		return errors.Wrap(err, "failed to save token")
+		return errors.Wrap(err, "failed to store token")
 	}
 	return nil
 }
 
-func (r *Repository) Get(ctx context.Context, guid string) (string, string, error) {
-	var refreshToken string
-	var ip string
-	query := `SELECT token, ip_address FROM auth WHERE guid = $1`
+func (r *Repository) GetRefreshToken(ctx context.Context, guid string) (domain.RefreshToken, error) {
+	query := `
+			SELECT token_hash, session_id, user_agent, ip_address, created_at, expires_at
+			FROM refresh_tokens
+			WHERE guid = $1
+		`
+	row := r.DB.QueryRow(ctx, query, guid)
 
-	err := r.DB.QueryRow(ctx, query, guid).Scan(&refreshToken, &ip)
+	var token domain.RefreshToken
+	guiduuid, err := uuid.Parse(guid)
+
+	token.GUID = guiduuid
+
 	if err != nil {
-		return "", "", err
+		return domain.RefreshToken{}, err
 	}
 
-	return refreshToken, ip, nil
+	err = row.Scan(&token.TokenHash, &token.SessionID, &token.UserAgent, &token.IP, &token.CreatedAt, &token.ExpiresAt)
+
+	if err != nil {
+		return domain.RefreshToken{}, err
+	}
+
+	return token, nil
+}
+
+func (r *Repository) DeleteRefreshToken(ctx context.Context, guid string) error {
+	query := `
+			DELETE FROM refresh_tokens
+			WHERE guid = $1
+		`
+
+	_, err := r.DB.Exec(ctx, query, guid)
+	return err
 }
