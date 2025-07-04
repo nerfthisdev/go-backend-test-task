@@ -19,9 +19,18 @@ func NewTokenRepository(db *pgxpool.Pool) *TokenRepository {
 
 func (r *TokenRepository) StoreRefreshToken(ctx context.Context, token domain.RefreshToken) error {
 	query := `
-	INSERT INTO refresh_tokens
-	(guid, token_hash, session_id, user_agent, ip_address, created_at, expires_at)
-	`
+
+		INSERT INTO refresh_tokens
+		(guid, token_hash, session_id, user_agent, ip_address, created_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (guid) DO UPDATE
+		SET token_hash = EXCLUDED.token_hash,
+			session_id = EXCLUDED.session_id,
+			user_agent = EXCLUDED.user_agent,
+			ip_address = EXCLUDED.ip_address,
+			created_at = EXCLUDED.created_at,
+			expires_at = EXCLUDED.expires_at
+`
 	_, err := r.db.Exec(ctx, query, token.GUID, token.TokenHash, token.SessionID, token.UserAgent, token.IP, token.CreatedAt, token.ExpiresAt)
 	if err != nil {
 		return errors.Wrap(err, "failed to store token")

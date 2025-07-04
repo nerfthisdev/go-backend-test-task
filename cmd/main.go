@@ -43,6 +43,10 @@ func main() {
 	tokenRepo := repository.NewTokenRepository(dbpool)
 	userRepo := repository.NewUserRepository(dbpool)
 
+	if err = repository.RunMigrations(dbpool, "migrations"); err != nil {
+		logger.Fatal("failed to init table", zap.Error(err))
+	}
+
 	if err != nil {
 		logger.Fatal("failed to connect to db", zap.String("reason", err.Error()))
 	}
@@ -61,7 +65,7 @@ func main() {
 	authhandler := handler.NewAuthHandler(authService)
 
 	router := http.NewServeMux()
-	router.HandleFunc("GET /api/v1/auth/{guid}", authhandler.Authorize)
+	router.HandleFunc("GET /api/v1/auth", authhandler.Authorize)
 
 	port := ":" + os.Getenv("HTTP_PORT")
 	server := http.Server{
@@ -69,7 +73,7 @@ func main() {
 		Handler: router,
 	}
 
-	log.Printf("starting server on %s", port)
+	logger.Info("starting server on ", zap.String("port", port))
 	if err := server.ListenAndServe(); err != nil {
 		logger.Fatal("failed to start server ", zap.String("reason", err.Error()))
 	}

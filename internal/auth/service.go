@@ -30,8 +30,6 @@ func (s *AuthService) Authorize(ctx context.Context, guid, useragent, ip string)
 
 	sessionID := uuid.NewString()
 
-	exists, err := s.users.UserExists(ctx, guid)
-
 	if guid == "" {
 		newGuid := uuid.New().String()
 		err := s.users.CreateUser(ctx, newGuid)
@@ -40,6 +38,8 @@ func (s *AuthService) Authorize(ctx context.Context, guid, useragent, ip string)
 		}
 		guid = newGuid
 	}
+
+	exists, err := s.users.UserExists(ctx, guid)
 
 	if err != nil {
 		s.logger.Error("failed to check user existance", zap.String("reason", err.Error()))

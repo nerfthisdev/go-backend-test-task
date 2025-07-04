@@ -26,7 +26,7 @@ func (s *JWTService) GenerateAccessToken(guid, sessionID string) (string, error)
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.accessTTL)),
 	})
 
-	accesTokenString, err := accessToken.SignedString(s.secret)
+	accesTokenString, err := accessToken.SignedString([]byte(s.secret))
 
 	if err != nil {
 		return "", err
