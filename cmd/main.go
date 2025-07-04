@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/nerfthisdev/go-backend-test-task/internal/auth"
 	"github.com/nerfthisdev/go-backend-test-task/internal/config"
 	"github.com/nerfthisdev/go-backend-test-task/internal/logger"
 	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
@@ -31,13 +32,27 @@ func main() {
 
 	logger := logger.GetLogger()
 
-	repo, err := repository.Init(ctx, cfg)
+	dbpool, err := repository.InitDB(ctx, cfg)
+	if err != nil {
+		logger.Fatal("failed to initialize db", zap.Error(err))
+	}
+
+	tokenRepo := repository.NewTokenRepository(dbpool)
+	userRepo := repository.NewUserRepository(dbpool)
 
 	if err != nil {
 		logger.Fatal("failed to connect to db", zap.String("reason", err.Error()))
 	}
-	defer repo.DB.Close()
 
 	logger.Info("successfully connected to db")
+
+	accessTTL, err := time.ParseDuration(cfg.AccessTTL)
+	if err != nil {
+		logger.Fatal("invalid ACCESS_TOKEN_TTL", zap.Error(err))
+	}
+
+	jwtService := auth.NewJwtService(cfg.JWTSecret, accessTTL)
+
+	authService := auth.NewAuthService(tokenRepo, jwtService, &logger)
 
 }
