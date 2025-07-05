@@ -60,10 +60,10 @@ func main() {
 
 	authService := auth.NewAuthService(tokenRepo, jwtService, userRepo, &logger)
 
-	authhandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService)
 
 	router := http.NewServeMux()
-	router.HandleFunc("GET /api/v1/auth", authhandler.Authorize)
+	router.HandleFunc("GET /api/v1/auth", authHandler.Authorize)
 
 	port := ":" + os.Getenv("HTTP_PORT")
 	server := http.Server{
