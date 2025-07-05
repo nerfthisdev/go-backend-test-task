@@ -9,16 +9,19 @@ import (
 	"github.com/nerfthisdev/go-backend-test-task/internal/middleware"
 )
 
+// RefreshRequest represents a request payload for token refresh.
 type RefreshRequest struct {
 	GUID         uuid.UUID `json:"guid"`
 	RefreshToken string    `json:"refresh_token"`
 }
 
+// TokenResponse contains generated JWT tokens.
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
+// MeResponse represents the /me endpoint response.
 type MeResponse struct {
 	GUID string `json:"guid"`
 }
@@ -33,6 +36,15 @@ func NewAuthHandler(service *auth.AuthService) *AuthHandler {
 	}
 }
 
+// Authorize godoc
+// @Summary      Authorize user
+// @Description  Returns new access and refresh tokens. If guid is empty a new user is created.
+// @Tags         auth
+// @Param        guid  query     string  false  "User GUID"
+// @Produce      json
+// @Success      200  {object}  TokenResponse
+// @Failure      401  {string}  string  "unauthorized"
+// @Router       /auth [get]
 func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 	guid := r.URL.Query().Get("guid")
 
@@ -51,6 +63,18 @@ func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Refresh godoc
+// @Summary      Refresh tokens
+// @Description  Generates new token pair using refresh token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body RefreshRequest true "Refresh request"
+// @Success      200 {object} TokenResponse
+// @Failure      400 {string} string "invalid request"
+// @Failure      401 {string} string "unauthorized"
+// @Security     BearerAuth
+// @Router       /refresh [post]
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req RefreshRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -85,6 +109,15 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Me godoc
+// @Summary      Get user info
+// @Description  Returns current user GUID
+// @Tags         auth
+// @Produce      json
+// @Success      200 {object} MeResponse
+// @Failure      401 {string} string "unauthorized"
+// @Security     BearerAuth
+// @Router       /me [post]
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	guidVal := r.Context().Value(middleware.ContextUserGUIDKey)
 

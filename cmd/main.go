@@ -7,6 +7,9 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/nerfthisdev/go-backend-test-task/docs" // swagger docs
+	httpSwagger "github.com/swaggo/http-swagger"
+
 	"github.com/joho/godotenv"
 	"github.com/nerfthisdev/go-backend-test-task/internal/auth"
 	"github.com/nerfthisdev/go-backend-test-task/internal/config"
@@ -19,6 +22,13 @@ import (
 
 const defaultTimeout = 5 * time.Second
 
+// @title           Go Backend Test Task API
+// @version         1.0
+// @description     This is the API for the authentication service.
+// @BasePath        /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in              header
+// @name            Authorization
 func main() {
 	// init env
 	if err := godotenv.Load(); err != nil {
@@ -73,6 +83,7 @@ func main() {
 		"POST /api/v1/me",
 		middleware.Auth(&logger, jwtService, tokenRepo, http.HandlerFunc(authHandler.Me)),
 	)
+	router.Handle("/swagger/", httpSwagger.WrapHandler)
 
 	port := ":" + os.Getenv("HTTP_PORT")
 	server := http.Server{
