@@ -74,13 +74,13 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 
 	router := http.NewServeMux()
-	router.HandleFunc("GET /api/v1/auth", authHandler.Authorize)
+	router.HandleFunc("POST /api/v1/auth", authHandler.Authorize)
 	router.Handle(
 		"POST /api/v1/refresh",
 		middleware.Auth(&logger, jwtService, tokenRepo, http.HandlerFunc(authHandler.Refresh)),
 	)
 	router.Handle(
-		"POST /api/v1/me",
+		"GET /api/v1/me",
 		middleware.Auth(&logger, jwtService, tokenRepo, http.HandlerFunc(authHandler.Me)),
 	)
 

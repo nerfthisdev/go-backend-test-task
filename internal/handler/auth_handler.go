@@ -44,7 +44,7 @@ func NewAuthHandler(service *auth.AuthService) *AuthHandler {
 // @Produce      json
 // @Success      200  {object}  TokenResponse
 // @Failure      401  {string}  string  "unauthorized"
-// @Router       /auth [get]
+// @Router       /auth [post]
 func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 	guidStr := r.URL.Query().Get("guid")
 	var guidPtr *uuid.UUID
@@ -126,7 +126,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // @Success      200 {object} MeResponse
 // @Failure      401 {string} string "unauthorized"
 // @Security     BearerAuth
-// @Router       /me [post]
+// @Router       /me [get]
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	guidVal := r.Context().Value(middleware.ContextUserGUIDKey)
 
@@ -142,6 +142,14 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Deauthorize godoc
+// @Summary      Deauthorize user
+// @Description  Deauthorizing current token and forbid user from requesting protected endpoints
+// @Tags         auth
+// @Success      204
+// @Failure      401 {string} string "unauthorized"
+// @Security     BearerAuth
+// @Router       /deauthorize [post]
 func (h *AuthHandler) Deauthorize(w http.ResponseWriter, r *http.Request) {
 	guidVal := r.Context().Value(middleware.ContextUserGUIDKey)
 

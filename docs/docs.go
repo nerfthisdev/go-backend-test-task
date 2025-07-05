@@ -49,6 +49,31 @@ const docTemplate = `{
                 }
             }
         },
+        "/deauthorize": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deauthorizing current token and forbid user from requesting protected endpoints",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Deauthorize user",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/me": {
             "post": {
                 "security": [

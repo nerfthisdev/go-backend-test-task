@@ -48,6 +48,22 @@ paths:
       summary: Authorize user
       tags:
       - auth
+  /deauthorize:
+    post:
+      description: Deauthorizing current token and forbid user from requesting protected
+        endpoints
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Deauthorize user
+      tags:
+      - auth
   /me:
     post:
       description: Returns current user GUID
