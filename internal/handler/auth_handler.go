@@ -141,3 +141,17 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
+
+func (h *AuthHandler) Deauthorize(w http.ResponseWriter, r *http.Request) {
+	guidVal := r.Context().Value(middleware.ContextUserGUIDKey)
+
+	guid := guidVal.(uuid.UUID)
+
+	err := h.auth.Deauthorize(r.Context(), guid)
+	if err != nil {
+		http.Error(w, "failed to deauthorize", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

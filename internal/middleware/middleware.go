@@ -56,6 +56,18 @@ func Auth(logger *zap.Logger, tokens domain.TokenService, repo domain.TokenRepos
 			return
 		}
 
+		exists, err := repo.SessionExists(r.Context(), sessionID)
+		if err != nil {
+			logger.Error("failed to check session", zap.Error(err))
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		if !exists {
+			logger.Warn("session not found in repo", zap.String("session_id", sessionID))
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), ContextUserGUIDKey, parsedGUID)
 		ctx = context.WithValue(ctx, ContextSessionIDKey, sessionID)
 		ctx = context.WithValue(ctx, ContextAccessTokenKey, accessToken)

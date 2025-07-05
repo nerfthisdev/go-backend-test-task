@@ -124,6 +124,15 @@ func (s *AuthService) Refresh(ctx context.Context, guid uuid.UUID, sessionID, re
 	return s.Authorize(ctx, &guid, userAgent, ip)
 }
 
+func (s *AuthService) Deauthorize(ctx context.Context, guid uuid.UUID) error {
+	err := s.repo.DeleteRefreshToken(ctx, guid)
+	if err != nil {
+		s.logger.Error("failed to deauth user", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
 func (s *AuthService) sendIPChangeWebhook(guid uuid.UUID, oldIP, newIP, ua string) {
 	type WebhookPayload struct {
 		GUID      string `json:"guid"`

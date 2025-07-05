@@ -83,6 +83,12 @@ func main() {
 		"POST /api/v1/me",
 		middleware.Auth(&logger, jwtService, tokenRepo, http.HandlerFunc(authHandler.Me)),
 	)
+
+	router.Handle(
+		"POST /api/v1/deauthorize",
+		middleware.Auth(&logger, jwtService, tokenRepo, http.HandlerFunc(authHandler.Deauthorize)),
+	)
+
 	router.Handle("/swagger/", httpSwagger.WrapHandler)
 
 	port := ":" + os.Getenv("HTTP_PORT")
