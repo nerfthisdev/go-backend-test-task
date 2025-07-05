@@ -2,11 +2,11 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nerfthisdev/go-backend-test-task/internal/domain"
-	"github.com/pkg/errors"
 )
 
 type TokenRepository struct {
@@ -33,7 +33,7 @@ func (r *TokenRepository) StoreRefreshToken(ctx context.Context, token domain.Re
 `
 	_, err := r.db.Exec(ctx, query, token.GUID, token.TokenHash, token.SessionID, token.UserAgent, token.IP, token.CreatedAt, token.ExpiresAt)
 	if err != nil {
-		return errors.Wrap(err, "failed to store token")
+		return fmt.Errorf("failed to store token: %w", err)
 	}
 	return nil
 }
@@ -56,7 +56,6 @@ func (r *TokenRepository) GetRefreshToken(ctx context.Context, guid string) (dom
 	}
 
 	err = row.Scan(&token.TokenHash, &token.SessionID, &token.UserAgent, &token.IP, &token.CreatedAt, &token.ExpiresAt)
-
 	if err != nil {
 		return domain.RefreshToken{}, err
 	}

@@ -27,7 +27,6 @@ func (s *JWTService) GenerateAccessToken(guid, sessionID string) (string, error)
 	})
 
 	accesTokenString, err := accessToken.SignedString([]byte(s.secret))
-
 	if err != nil {
 		return "", err
 	}
@@ -43,13 +42,12 @@ func (s *JWTService) GenerateRefreshToken() (string, error) {
 }
 
 func (s *JWTService) ValidateAccessToken(token string) (map[string]any, error) {
-	parsed, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+	parsed, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method %v", t.Header["alg"])
 		}
 		return []byte(s.secret), nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +80,6 @@ func (s *JWTService) CompareRefreshToken(token string, hash string) bool {
 
 func (s *JWTService) EncodeBase64(token string) string {
 	return base64.StdEncoding.EncodeToString([]byte(token))
-
 }
 
 func (s *JWTService) DecodeBase64(encoded string) (string, error) {
