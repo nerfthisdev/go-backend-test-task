@@ -9,7 +9,7 @@
     "basePath": "/api/v1",
     "paths": {
         "/auth": {
-            "get": {
+            "post": {
                 "description": "Returns new access and refresh tokens. If guid is empty a new user is created.",
                 "produces": [
                     "application/json"
@@ -68,7 +68,7 @@
             }
         },
         "/me": {
-            "post": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []

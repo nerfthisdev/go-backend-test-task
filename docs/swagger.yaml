@@ -26,7 +26,7 @@ info:
   version: "1.0"
 paths:
   /auth:
-    get:
+    post:
       description: Returns new access and refresh tokens. If guid is empty a new user
         is created.
       parameters:
@@ -65,7 +65,7 @@ paths:
       tags:
       - auth
   /me:
-    post:
+    get:
       description: Returns current user GUID
       produces:
       - application/json

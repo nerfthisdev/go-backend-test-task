@@ -16,7 +16,7 @@ const docTemplate = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/auth": {
-            "get": {
+            "post": {
                 "description": "Returns new access and refresh tokens. If guid is empty a new user is created.",
                 "produces": [
                     "application/json"
@@ -75,7 +75,7 @@ const docTemplate = `{
             }
         },
         "/me": {
-            "post": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []

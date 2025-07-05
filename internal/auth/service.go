@@ -113,7 +113,7 @@ func (s *AuthService) Refresh(ctx context.Context, guid uuid.UUID, sessionID, re
 
 	if stored.UserAgent != userAgent {
 		s.logger.Warn("user-agent mismatch", zap.String("guid", guid.String()))
-		s.repo.DeleteRefreshToken(ctx, guid)
+		s.Deauthorize(ctx, guid)
 		return domain.TokenPair{}, fmt.Errorf("unauthorized")
 	}
 
