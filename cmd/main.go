@@ -37,21 +37,19 @@ func main() {
 
 	dbpool, err := repository.InitDB(ctx, cfg)
 	if err != nil {
-		logger.Fatal("failed to initialize db", zap.Error(err))
+		logger.Fatal("failed to connect to db", zap.Error(err))
 	}
+
+	logger.Info("successfully connected to db")
+
+	defer dbpool.Close()
 
 	tokenRepo := repository.NewTokenRepository(dbpool)
 	userRepo := repository.NewUserRepository(dbpool)
 
 	if err = repository.RunMigrations(dbpool, "migrations"); err != nil {
-		logger.Fatal("failed to init table", zap.Error(err))
+		logger.Fatal("failed to run migrations", zap.Error(err))
 	}
-
-	if err != nil {
-		logger.Fatal("failed to connect to db", zap.String("reason", err.Error()))
-	}
-
-	logger.Info("successfully connected to db")
 
 	accessTTL, err := time.ParseDuration(cfg.AccessTTL)
 	if err != nil {
@@ -77,5 +75,4 @@ func main() {
 	if err := server.ListenAndServe(); err != nil {
 		logger.Fatal("failed to start server ", zap.String("reason", err.Error()))
 	}
-
 }
