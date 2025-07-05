@@ -15,13 +15,11 @@ func RunMigrations(pool *pgxpool.Pool, migrationsPath string) error {
 	defer sqlDB.Close()
 
 	driver, err := pgx.WithInstance(sqlDB, &pgx.Config{})
-
 	if err != nil {
 		return fmt.Errorf("failed to create migration driver: %w", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance("file://"+migrationsPath, "postgres", driver)
-
 	if err != nil {
 		return fmt.Errorf("failed to init migrate: %w", err)
 	}
@@ -30,5 +28,4 @@ func RunMigrations(pool *pgxpool.Pool, migrationsPath string) error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 	return nil
-
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/nerfthisdev/go-backend-test-task/internal/config"
 	"github.com/nerfthisdev/go-backend-test-task/internal/handler"
 	"github.com/nerfthisdev/go-backend-test-task/internal/logger"
+	"github.com/nerfthisdev/go-backend-test-task/internal/middleware"
 	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
 	"go.uber.org/zap"
 )
@@ -64,6 +65,14 @@ func main() {
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/v1/auth", authHandler.Authorize)
+	router.Handle(
+		"POST /api/v1/refresh",
+		middleware.Auth(&logger, jwtService, tokenRepo, http.HandlerFunc(authHandler.Refresh)),
+	)
+	router.Handle(
+		"POST /api/v1/me",
+		middleware.Auth(&logger, jwtService, tokenRepo, http.HandlerFunc(authHandler.Me)),
+	)
 
 	port := ":" + os.Getenv("HTTP_PORT")
 	server := http.Server{

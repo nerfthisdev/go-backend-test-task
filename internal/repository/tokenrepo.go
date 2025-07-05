@@ -64,11 +64,16 @@ func (r *TokenRepository) GetRefreshToken(ctx context.Context, guid string) (dom
 }
 
 func (r *TokenRepository) DeleteRefreshToken(ctx context.Context, guid string) error {
+	guiduuid, err := uuid.Parse(guid)
+	if err != nil {
+		return err
+	}
+
 	query := `
 			DELETE FROM refresh_tokens
 			WHERE guid = $1
 		`
 
-	_, err := r.db.Exec(ctx, query, guid)
+	_, err = r.db.Exec(ctx, query, guiduuid)
 	return err
 }
