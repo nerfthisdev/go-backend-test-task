@@ -22,7 +22,7 @@ type RefreshToken struct {
 }
 
 type TokenService interface {
-	GenerateAccessToken(guid, sessionID string) (string, error)
+	GenerateAccessToken(guid uuid.UUID, sessionID string) (string, error)
 	GenerateRefreshToken() (string, error)
 	ValidateAccessToken(token string) (map[string]any, error)
 

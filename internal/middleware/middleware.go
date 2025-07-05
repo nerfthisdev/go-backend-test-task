@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/nerfthisdev/go-backend-test-task/internal/domain"
 	"go.uber.org/zap"
 )
@@ -36,10 +37,17 @@ func Auth(logger *zap.Logger, tokens domain.TokenService, repo domain.TokenRepos
 			return
 		}
 
-		guid, okGUID := claims["sub"].(string)
+		guidStr, okGUID := claims["sub"].(string)
 		sessionID, okSessionID := claims["jti"].(string)
 
-		logger.Warn("trying to auth", zap.String("guid", guid))
+		parsedGUID, err := uuid.Parse(guidStr)
+		if err != nil {
+			logger.Warn("invalid guid in token", zap.Error(err))
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		logger.Warn("trying to auth", zap.String("guid", guidStr))
 		logger.Warn("session id", zap.String("sessionID", sessionID))
 
 		if !okGUID || !okSessionID {
@@ -48,7 +56,7 @@ func Auth(logger *zap.Logger, tokens domain.TokenService, repo domain.TokenRepos
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), ContextUserGUIDKey, guid)
+		ctx := context.WithValue(r.Context(), ContextUserGUIDKey, parsedGUID)
 		ctx = context.WithValue(ctx, ContextSessionIDKey, sessionID)
 		ctx = context.WithValue(ctx, ContextAccessTokenKey, accessToken)
 

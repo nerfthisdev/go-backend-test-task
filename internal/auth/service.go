@@ -30,30 +30,30 @@ func NewAuthService(repo domain.TokenRepository, tokens domain.TokenService, use
 	}
 }
 
-func (s *AuthService) Authorize(ctx context.Context, guid, useragent, ip string) (domain.TokenPair, error) {
+func (s *AuthService) Authorize(ctx context.Context, guid *uuid.UUID, useragent, ip string) (domain.TokenPair, error) {
 	sessionID := uuid.NewString()
 
-	if guid == "" {
-		newGuid := uuid.New().String()
+	if guid == nil {
+		newGuid := uuid.New()
 		err := s.users.CreateUser(ctx, newGuid)
 		if err != nil {
 			return domain.TokenPair{}, err
 		}
-		guid = newGuid
+		guid = &newGuid
 	}
 
-	exists, err := s.users.UserExists(ctx, guid)
+	exists, err := s.users.UserExists(ctx, *guid)
 	if err != nil {
 		s.logger.Error("failed to check user existance", zap.String("reason", err.Error()))
 		return domain.TokenPair{}, err
 	}
 
 	if !exists {
-		s.logger.Warn("unauthorized attempt with unknown guid", zap.String("guid", guid))
+		s.logger.Warn("unauthorized attempt with unknown guid", zap.String("guid", guid.String()))
 		return domain.TokenPair{}, fmt.Errorf("user does not exist")
 	}
 
-	accessToken, err := s.tokens.GenerateAccessToken(guid, sessionID)
+	accessToken, err := s.tokens.GenerateAccessToken(*guid, sessionID)
 	if err != nil {
 		s.logger.Error("failed to generate access token", zap.String("reason", err.Error()))
 		return domain.TokenPair{}, err
@@ -71,14 +71,8 @@ func (s *AuthService) Authorize(ctx context.Context, guid, useragent, ip string)
 		return domain.TokenPair{}, err
 	}
 
-	guiduuid, err := uuid.Parse(guid)
-	if err != nil {
-		s.logger.Error("failed to parse uuid", zap.Error(err))
-		return domain.TokenPair{}, err
-	}
-
 	refreshToken := domain.RefreshToken{
-		GUID:      guiduuid,
+		GUID:      *guid,
 		TokenHash: hashed,
 		SessionID: sessionID,
 		UserAgent: useragent,
@@ -97,7 +91,7 @@ func (s *AuthService) Authorize(ctx context.Context, guid, useragent, ip string)
 	}, nil
 }
 
-func (s *AuthService) Refresh(ctx context.Context, guid, sessionID, refreshToken, userAgent, ip string) (domain.TokenPair, error) {
+func (s *AuthService) Refresh(ctx context.Context, guid uuid.UUID, sessionID, refreshToken, userAgent, ip string) (domain.TokenPair, error) {
 	stored, err := s.repo.GetRefreshToken(ctx, guid)
 	if err != nil {
 		s.logger.Error("refresh failed: no stored token", zap.Error(err))
@@ -105,20 +99,20 @@ func (s *AuthService) Refresh(ctx context.Context, guid, sessionID, refreshToken
 	}
 
 	if stored.SessionID != sessionID {
-		s.logger.Warn("session id doesnt match", zap.String("guid", guid))
+		s.logger.Warn("session id doesnt match", zap.String("guid", guid.String()))
 		s.repo.DeleteRefreshToken(ctx, guid)
 		return domain.TokenPair{}, fmt.Errorf("unauthorized")
 	}
 
 	decoded, err := s.tokens.DecodeBase64(refreshToken)
 	if err != nil || !s.tokens.CompareRefreshToken(decoded, stored.TokenHash) {
-		s.logger.Warn("refresh token mismatch or tampered", zap.String("guid", guid))
+		s.logger.Warn("refresh token mismatch or tampered", zap.String("guid", guid.String()))
 		s.repo.DeleteRefreshToken(ctx, guid)
 		return domain.TokenPair{}, fmt.Errorf("unauthorized")
 	}
 
 	if stored.UserAgent != userAgent {
-		s.logger.Warn("user-agent mismatch", zap.String("guid", guid))
+		s.logger.Warn("user-agent mismatch", zap.String("guid", guid.String()))
 		s.repo.DeleteRefreshToken(ctx, guid)
 		return domain.TokenPair{}, fmt.Errorf("unauthorized")
 	}
@@ -127,10 +121,10 @@ func (s *AuthService) Refresh(ctx context.Context, guid, sessionID, refreshToken
 		go s.sendIPChangeWebhook(guid, stored.IP, ip, userAgent)
 	}
 
-	return s.Authorize(ctx, guid, userAgent, ip)
+	return s.Authorize(ctx, &guid, userAgent, ip)
 }
 
-func (s *AuthService) sendIPChangeWebhook(guid, oldIP, newIP, ua string) {
+func (s *AuthService) sendIPChangeWebhook(guid uuid.UUID, oldIP, newIP, ua string) {
 	type WebhookPayload struct {
 		GUID      string `json:"guid"`
 		OldIP     string `json:"old_ip"`
@@ -140,7 +134,7 @@ func (s *AuthService) sendIPChangeWebhook(guid, oldIP, newIP, ua string) {
 	}
 
 	payload := WebhookPayload{
-		GUID:      guid,
+		GUID:      guid.String(),
 		OldIP:     oldIP,
 		NewIP:     newIP,
 		UserAgent: ua,

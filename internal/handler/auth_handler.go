@@ -23,7 +23,7 @@ type TokenResponse struct {
 
 // MeResponse represents the /me endpoint response.
 type MeResponse struct {
-	GUID string `json:"guid"`
+	GUID uuid.UUID `json:"guid"`
 }
 
 type AuthHandler struct {
@@ -46,12 +46,21 @@ func NewAuthHandler(service *auth.AuthService) *AuthHandler {
 // @Failure      401  {string}  string  "unauthorized"
 // @Router       /auth [get]
 func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
-	guid := r.URL.Query().Get("guid")
+	guidStr := r.URL.Query().Get("guid")
+	var guidPtr *uuid.UUID
+	if guidStr != "" {
+		parsed, err := uuid.Parse(guidStr)
+		if err != nil {
+			http.Error(w, "invalid guid", http.StatusBadRequest)
+			return
+		}
+		guidPtr = &parsed
+	}
 
 	userAgent := r.UserAgent()
 	ip := r.RemoteAddr
 
-	tokens, err := h.auth.Authorize(r.Context(), guid, userAgent, ip)
+	tokens, err := h.auth.Authorize(r.Context(), guidPtr, userAgent, ip)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -92,7 +101,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	tokens, err := h.auth.Refresh(
 		r.Context(),
-		req.GUID.String(),
+		req.GUID,
 		sessionID,
 		req.RefreshToken,
 		userAgent,
@@ -121,7 +130,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	guidVal := r.Context().Value(middleware.ContextUserGUIDKey)
 
-	guid := guidVal.(string)
+	guid := guidVal.(uuid.UUID)
 
 	response := MeResponse{
 		GUID: guid,

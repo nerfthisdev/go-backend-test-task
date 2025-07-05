@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,9 +20,9 @@ func NewJwtService(secret string, expiration time.Duration) *JWTService {
 	return &JWTService{secret: secret, accessTTL: expiration}
 }
 
-func (s *JWTService) GenerateAccessToken(guid, sessionID string) (string, error) {
+func (s *JWTService) GenerateAccessToken(guid uuid.UUID, sessionID string) (string, error) {
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.RegisteredClaims{
-		Subject:   guid,
+		Subject:   guid.String(),
 		ID:        sessionID,
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.accessTTL)),
 	})

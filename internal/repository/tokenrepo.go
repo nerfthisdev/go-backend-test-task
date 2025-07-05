@@ -38,7 +38,7 @@ func (r *TokenRepository) StoreRefreshToken(ctx context.Context, token domain.Re
 	return nil
 }
 
-func (r *TokenRepository) GetRefreshToken(ctx context.Context, guid string) (domain.RefreshToken, error) {
+func (r *TokenRepository) GetRefreshToken(ctx context.Context, guid uuid.UUID) (domain.RefreshToken, error) {
 	query := `
 			SELECT token_hash, session_id, user_agent, ip_address, created_at, expires_at
 			FROM refresh_tokens
@@ -47,33 +47,22 @@ func (r *TokenRepository) GetRefreshToken(ctx context.Context, guid string) (dom
 	row := r.db.QueryRow(ctx, query, guid)
 
 	var token domain.RefreshToken
-	guiduuid, err := uuid.Parse(guid)
+	token.GUID = guid
 
-	token.GUID = guiduuid
-
-	if err != nil {
-		return domain.RefreshToken{}, err
-	}
-
-	err = row.Scan(&token.TokenHash, &token.SessionID, &token.UserAgent, &token.IP, &token.CreatedAt, &token.ExpiresAt)
-	if err != nil {
+	if err := row.Scan(&token.TokenHash, &token.SessionID, &token.UserAgent, &token.IP, &token.CreatedAt, &token.ExpiresAt); err != nil {
 		return domain.RefreshToken{}, err
 	}
 
 	return token, nil
 }
 
-func (r *TokenRepository) DeleteRefreshToken(ctx context.Context, guid string) error {
-	guiduuid, err := uuid.Parse(guid)
-	if err != nil {
-		return err
-	}
+func (r *TokenRepository) DeleteRefreshToken(ctx context.Context, guid uuid.UUID) error {
 
 	query := `
 			DELETE FROM refresh_tokens
 			WHERE guid = $1
 		`
 
-	_, err = r.db.Exec(ctx, query, guiduuid)
+	_, err := r.db.Exec(ctx, query, guid)
 	return err
 }
