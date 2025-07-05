@@ -1,0 +1,123 @@
+basePath: /api/v1
+definitions:
+  handler.MeResponse:
+    properties:
+      guid:
+        type: string
+    type: object
+  handler.RefreshRequest:
+    properties:
+      guid:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  handler.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is the API for the authentication service.
+  title: Go Backend Test Task API
+  version: "1.0"
+paths:
+  /auth:
+    post:
+      description: Returns new access and refresh tokens. If guid is empty a new user
+        is created.
+      parameters:
+      - description: User GUID
+        in: query
+        name: guid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.TokenResponse'
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      summary: Authorize user
+      tags:
+      - auth
+  /deauthorize:
+    post:
+      description: Deauthorizing current token and forbid user from requesting protected
+        endpoints
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Deauthorize user
+      tags:
+      - auth
+  /me:
+    get:
+      description: Returns current user GUID
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MeResponse'
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user info
+      tags:
+      - auth
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generates new token pair using refresh token
+      parameters:
+      - description: Refresh request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.TokenResponse'
+        "400":
+          description: invalid request
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Refresh tokens
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
