@@ -2,73 +2,96 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/nerfthisdev/go-backend-test-task/internal/model"
-	"github.com/nerfthisdev/go-backend-test-task/internal/repository"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/nerfthisdev/go-backend-test-task/internal/domain"
+	"go.uber.org/zap"
 )
 
-var ErrTokenNotFound = errors.New("token not found")
-
 type AuthService struct {
-	Repo       *repository.Repository
-	signingKey []byte
-	accessTTL  time.Duration
-	refreshTTL time.Duration
+	repo   domain.TokenRepository
+	tokens domain.TokenService
+	users  domain.UserRepository
+	logger *zap.Logger
 }
 
-func NewAuthService(repo *repository.Repository, signingKey string, accessTTL, refreshTTL time.Duration) *AuthService {
+func NewAuthService(repo domain.TokenRepository, tokens domain.TokenService, users domain.UserRepository, logger *zap.Logger) *AuthService {
 	return &AuthService{
-		Repo:       repo,
-		signingKey: []byte(signingKey),
-		accessTTL:  accessTTL,
-		refreshTTL: refreshTTL,
+		repo:   repo,
+		tokens: tokens,
+		users:  users,
+		logger: logger,
 	}
 }
 
-func (s *AuthService) CreateTokenPair(ctx context.Context, guid uuid.UUID) (model.TokenPair, error) {
-	// HMAC and SHA512
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.RegisteredClaims{
-		Subject:   guid.String(),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.accessTTL)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-	})
+func (s *AuthService) Authorize(ctx context.Context, guid, useragent, ip string) (domain.TokenPair, error) {
 
-	accessTokenString, err := accessToken.SignedString(s.signingKey)
+	sessionID := uuid.NewString()
+
+	if guid == "" {
+		newGuid := uuid.New().String()
+		err := s.users.CreateUser(ctx, newGuid)
+		if err != nil {
+			return domain.TokenPair{}, err
+		}
+		guid = newGuid
+	}
+
+	exists, err := s.users.UserExists(ctx, guid)
+
 	if err != nil {
-		return model.TokenPair{}, err
+		s.logger.Error("failed to check user existance", zap.String("reason", err.Error()))
+		return domain.TokenPair{}, err
 	}
 
-	refreshTokenBytes := make([]byte, 32)
-	if _, err := rand.Read(refreshTokenBytes); err != nil {
-		return model.TokenPair{}, err
+	if !exists {
+		s.logger.Warn("unauthorized attempt with unknown guid", zap.String("guid", guid))
+		return domain.TokenPair{}, errors.New("user does not exist")
 	}
 
-	refreshTokenString := base64.StdEncoding.EncodeToString(refreshTokenBytes)
-	hashedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(refreshTokenString), bcrypt.DefaultCost)
+	accessToken, err := s.tokens.GenerateAccessToken(guid, sessionID)
+
 	if err != nil {
-		return model.TokenPair{}, err
+		s.logger.Error("failed to generate access token", zap.String("reason", err.Error()))
+		return domain.TokenPair{}, err
 	}
 
-	return model.TokenPair{
-		AccessToken:  accessTokenString,
-		RefreshToken: string(hashedRefreshToken),
-		IssuedAt:     time.Now().String(),
-		RefreshExp:   time.Now().Add(s.refreshTTL).String(),
-	}, err
-}
-
-func (s *AuthService) GetUserByGuid(ctx context.Context, guid uuid.UUID) (model.UserResponse, error) {
-	userResponse, err := s.repo.SelectUser(ctx, guid)
+	refreshPlain, err := s.tokens.GenerateRefreshToken()
 	if err != nil {
-		return model.UserResponse{}, err
+		s.logger.Error("failed to generate refresh token", zap.String("reason", err.Error()))
+		return domain.TokenPair{}, err
 	}
 
-	return *userResponse, nil
+	hashed, err := s.tokens.HashRefreshToken(refreshPlain)
+	if err != nil {
+		s.logger.Error("failed to hash refresh token", zap.String("reason", err.Error()))
+		return domain.TokenPair{}, err
+	}
+
+	guiduuid, err := uuid.Parse(guid)
+
+	if err != nil {
+		s.logger.Error("failed to parse uuid", zap.Error(err))
+		return domain.TokenPair{}, err
+	}
+
+	refreshToken := domain.RefreshToken{
+		GUID:      guiduuid,
+		TokenHash: hashed,
+		SessionID: sessionID,
+		UserAgent: useragent,
+		IP:        ip,
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+
+	if err := s.repo.StoreRefreshToken(ctx, refreshToken); err != nil {
+		s.logger.Error("failed to store refresh token", zap.Error(err))
+		return domain.TokenPair{}, err
+	}
+	return domain.TokenPair{AccessToken: accessToken,
+		RefreshToken: s.tokens.EncodeBase64(refreshPlain)}, nil
+
 }
